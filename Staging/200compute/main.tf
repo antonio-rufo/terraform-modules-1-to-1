@@ -89,20 +89,3 @@ module "ec2_sg" {
     Name = "EC2-SG"
   }
 }
-
-# resource "aws_security_group" "fargate_task" {
-#   name_prefix = "FargateTask-"
-#   description = "Access to Fargate task(s)"
-#   vpc_id      = data.terraform_remote_state.tf_000base.outputs.base_network_vpc_id
-#
-#   tags = merge(
-#     local.tags,
-#     map(
-#       "Name", "FargateTask"
-#     )
-#   )
-#
-#   lifecycle {
-#     create_before_destroy = true
-#   }
-# }
