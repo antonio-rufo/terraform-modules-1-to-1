@@ -57,39 +57,6 @@ locals {
   }
 }
 
-# module "ec2_sg" {
-#   source = "terraform-aws-modules/security-group/aws"
-#
-#   vpc_id      = data.terraform_remote_state.tf_000base.outputs.base_network_vpc_id
-#   name        = "EC2-SG"
-#   description = "security group for ec2 instances"
-#
-#   egress_cidr_blocks = ["0.0.0.0/0"]
-#   egress_with_cidr_blocks = [
-#     {
-#       from_port   = 0
-#       to_port     = 0
-#       protocol    = "-1"
-#       description = "All"
-#       cidr_blocks = "0.0.0.0/0"
-#     },
-#   ]
-#
-#   ingress_cidr_blocks = ["0.0.0.0/0"]
-#   ingress_with_cidr_blocks = [
-#     {
-#       from_port   = 80
-#       to_port     = 80
-#       protocol    = "tcp"
-#       description = "http ports"
-#       cidr_blocks = "0.0.0.0/0"
-#     },
-#   ]
-#   tags = {
-#     Name = "EC2-SG"
-#   }
-# }
-
 module "ec2_sg" {
   source = "terraform-aws-modules/security-group/aws"
 
@@ -125,9 +92,10 @@ module "ec2_sg" {
     #   cidr_blocks = "10.0.0.0/16"
     # },
   ]
-  tags = {
-    Name = "EC2-SG"
-  }
+  tags = local.tags
+  # tags = {
+  #   Name = "EC2-SG"
+  # }
 }
 
 module "rds_sg" {
@@ -158,9 +126,10 @@ module "rds_sg" {
       cidr_blocks = "0.0.0.0/0"
     },
   ]
-  tags = {
-    Name = "RDS-SG"
-  }
+  tags = local.tags
+  # tags = {
+  #   Name = "RDS-SG"
+  # }
 }
 
 module "elb_sg" {
@@ -191,9 +160,10 @@ module "elb_sg" {
       cidr_blocks = "0.0.0.0/0"
     },
   ]
-  tags = {
-    Name = "ELB-SG"
-  }
+  tags = local.tags
+  # tags = {
+  #   Name = "ELB-SG"
+  # }
 }
 
 # module "elb_http" {
@@ -239,31 +209,13 @@ module "asg" {
   name = "service"
 
   # Launch configuration
-  lc_name = "example-lc"
-
+  lc_name         = "example-lc"
   image_id        = "ami-0f767afb799f45102"
   instance_type   = "t2.micro"
   security_groups = ["${module.ec2_sg.this_security_group_id}"]
 
   user_data = file(var.ASG_USER_DATA_WPSTP)
-
-  key_name = aws_key_pair.mykeypair.key_name
-
-  # ebs_block_device = [
-  #   {
-  #     device_name           = "/dev/xvdz"
-  #     volume_type           = "gp2"
-  #     volume_size           = "50"
-  #     delete_on_termination = true
-  #   },
-  # ]
-  #
-  # root_block_device = [
-  #   {
-  #     volume_size = "50"
-  #     volume_type = "gp2"
-  #   },
-  # ]
+  key_name  = aws_key_pair.mykeypair.key_name
 
   # Auto scaling group
   asg_name                  = "example-asg"
@@ -277,26 +229,21 @@ module "asg" {
   health_check_type         = "EC2"
   force_delete              = true
 
-  # load_balancers    = ["${module.alb.this_lb_id}"]
-  # target_group_arns = ["${module.alb.this_lb_id}"]
+  # load_balancers    = ["${module.alb.this_lb_dns_name}"]
+  # target_group_arns = ["${module.alb.target_group_arns[0]}"]
 
   tags = [
     {
       key                 = "Environment"
-      value               = "dev"
+      value               = "Staging"
       propagate_at_launch = true
     },
     {
-      key                 = "Project"
-      value               = "megasecret"
+      key                 = "ServiceProvider"
+      value               = "Antonio"
       propagate_at_launch = true
     },
   ]
-
-  tags_as_map = {
-    extra_tag1 = "extra_value1"
-    extra_tag2 = "extra_value2"
-  }
 }
 
 resource "aws_key_pair" "mykeypair" {
@@ -307,52 +254,52 @@ resource "aws_key_pair" "mykeypair" {
   }
 }
 
-# module "alb" {
-#   source  = "terraform-aws-modules/alb/aws"
-#   version = "~> 5.0"
-#
-#   name = "my-alb"
-#
-#   load_balancer_type = "application"
-#
-#   vpc_id          = data.terraform_remote_state.tf_000base.outputs.base_network_vpc_id
-#   subnets         = data.terraform_remote_state.tf_000base.outputs.base_network_public_subnets
-#   security_groups = ["${module.elb_sg.this_security_group_id}"]
-#
-#   # access_logs = {
-#   #   bucket = "my-alb-logs"
-#   # }
-#
-#   target_groups = [
-#     {
-#       name_prefix      = "test"
-#       backend_protocol = "HTTP"
-#       backend_port     = 80
-#       target_type      = "instance"
-#     }
-#   ]
-#
-#   # https_listeners = [
-#   #   {
-#   #     port               = 443
-#   #     protocol           = "HTTPS"
-#   #     certificate_arn    = "arn:aws:iam::123456789012:server-certificate/test_cert-123456789012"
-#   #     target_group_index = 0
-#   #   }
-#   # ]
-#
-#   http_tcp_listeners = [
-#     {
-#       port               = 80
-#       protocol           = "HTTP"
-#       target_group_index = 0
-#     }
-#   ]
-#
-#   tags = {
-#     Environment = "Test"
-#   }
-# }
+module "alb" {
+  source  = "terraform-aws-modules/alb/aws"
+  version = "~> 5.0"
+
+  name = "my-alb"
+
+  load_balancer_type = "application"
+
+  vpc_id          = data.terraform_remote_state.tf_000base.outputs.base_network_vpc_id
+  subnets         = data.terraform_remote_state.tf_000base.outputs.base_network_public_subnets
+  security_groups = ["${module.elb_sg.this_security_group_id}"]
+
+  # access_logs = {
+  #   bucket = "my-alb-logs"
+  # }
+
+  target_groups = [
+    {
+      name_prefix      = "test"
+      backend_protocol = "HTTP"
+      backend_port     = 80
+      target_type      = "instance"
+    }
+  ]
+
+  # https_listeners = [
+  #   {
+  #     port               = 443
+  #     protocol           = "HTTPS"
+  #     certificate_arn    = "arn:aws:iam::123456789012:server-certificate/test_cert-123456789012"
+  #     target_group_index = 0
+  #   }
+  # ]
+
+  http_tcp_listeners = [
+    {
+      port               = 80
+      protocol           = "HTTP"
+      target_group_index = 0
+    }
+  ]
+
+  tags = {
+    Environment = "Test"
+  }
+}
 
 # ### ADDED ON STUFF
 #
