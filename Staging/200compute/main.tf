@@ -166,41 +166,41 @@ module "elb_sg" {
   # }
 }
 
-# module "elb_http" {
-#   source  = "terraform-aws-modules/elb/aws"
-#   version = "~> 2.0"
-#
-#   name = "elb-example"
-#
-#   subnets         = data.terraform_remote_state.tf_000base.outputs.base_network_public_subnets
-#   security_groups = ["${module.elb_sg.this_security_group_id}"]
-#   internal        = false
-#
-#   listener = [
-#     {
-#       instance_port     = "80"
-#       instance_protocol = "HTTP"
-#       lb_port           = "80"
-#       lb_protocol       = "HTTP"
-#     },
-#   ]
-#
-#   health_check = {
-#     target              = "HTTP:80/healthy.html"
-#     interval            = 30
-#     healthy_threshold   = 2
-#     unhealthy_threshold = 2
-#     timeout             = 5
-#   }
-#   cross_zone_load_balancing   = true
-#   connection_draining         = true
-#   connection_draining_timeout = 400
-#
-#   tags = {
-#     Owner       = "user"
-#     Environment = "dev"
-#   }
-# }
+module "elb_http" {
+  source  = "terraform-aws-modules/elb/aws"
+  version = "~> 2.0"
+
+  name = "elb-example"
+
+  subnets         = data.terraform_remote_state.tf_000base.outputs.base_network_public_subnets
+  security_groups = ["${module.elb_sg.this_security_group_id}"]
+  internal        = false
+
+  listener = [
+    {
+      instance_port     = "80"
+      instance_protocol = "HTTP"
+      lb_port           = "80"
+      lb_protocol       = "HTTP"
+    },
+  ]
+
+  health_check = {
+    target              = "HTTP:80/healthy.html"
+    interval            = 30
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+  }
+  cross_zone_load_balancing   = true
+  connection_draining         = true
+  connection_draining_timeout = 400
+
+  tags = {
+    Owner       = "user"
+    Environment = "dev"
+  }
+}
 
 module "asg" {
   source  = "terraform-aws-modules/autoscaling/aws"
@@ -228,9 +228,7 @@ module "asg" {
   health_check_grace_period = 300
   health_check_type         = "EC2"
   force_delete              = true
-
-  # load_balancers    = ["${module.alb.this_lb_dns_name}"]
-  # target_group_arns = ["${module.alb.target_group_arns[0]}"]
+  load_balancers  = [module.elb_http.this_elb_id]
 
   tags = [
     {
@@ -254,53 +252,52 @@ resource "aws_key_pair" "mykeypair" {
   }
 }
 
-module "alb" {
-  source  = "terraform-aws-modules/alb/aws"
-  version = "~> 5.0"
-
-  name = "my-alb"
-
-  load_balancer_type = "application"
-
-  vpc_id          = data.terraform_remote_state.tf_000base.outputs.base_network_vpc_id
-  subnets         = data.terraform_remote_state.tf_000base.outputs.base_network_public_subnets
-  security_groups = ["${module.elb_sg.this_security_group_id}"]
-
-  # access_logs = {
-  #   bucket = "my-alb-logs"
-  # }
-
-  target_groups = [
-    {
-      name_prefix      = "test"
-      backend_protocol = "HTTP"
-      backend_port     = 80
-      target_type      = "instance"
-    }
-  ]
-
-  # https_listeners = [
-  #   {
-  #     port               = 443
-  #     protocol           = "HTTPS"
-  #     certificate_arn    = "arn:aws:iam::123456789012:server-certificate/test_cert-123456789012"
-  #     target_group_index = 0
-  #   }
-  # ]
-
-  http_tcp_listeners = [
-    {
-      port               = 80
-      protocol           = "HTTP"
-      target_group_index = 0
-    }
-  ]
-
-  tags = {
-    Environment = "Test"
-  }
-}
-
+# module "alb" {
+#   source  = "terraform-aws-modules/alb/aws"
+#   version = "~> 5.0"
+#
+#   name = "my-alb"
+#
+#   load_balancer_type = "application"
+#
+#   vpc_id          = data.terraform_remote_state.tf_000base.outputs.base_network_vpc_id
+#   subnets         = data.terraform_remote_state.tf_000base.outputs.base_network_public_subnets
+#   security_groups = ["${module.elb_sg.this_security_group_id}"]
+#
+#   # access_logs = {
+#   #   bucket = "my-alb-logs"
+#   # }
+#
+#   target_groups = [
+#     {
+#       name_prefix      = "test"
+#       backend_protocol = "HTTP"
+#       backend_port     = 80
+#       target_type      = "instance"
+#     }
+#   ]
+#
+#   # https_listeners = [
+#   #   {
+#   #     port               = 443
+#   #     protocol           = "HTTPS"
+#   #     certificate_arn    = "arn:aws:iam::123456789012:server-certificate/test_cert-123456789012"
+#   #     target_group_index = 0
+#   #   }
+#   # ]
+#
+#   http_tcp_listeners = [
+#     {
+#       port               = 80
+#       protocol           = "HTTP"
+#       target_group_index = 0
+#     }
+#   ]
+#
+#   tags = {
+#     Environment = "Test"
+#   }
+# }
 # ### ADDED ON STUFF
 #
 # module "redirect_sg" {
